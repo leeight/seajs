@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>hello tpl</title>
+        <script src="../../dist/sea-debug.js"></script>
+        <script>
+        seajs.config({
+          base: '..',
+          plugins: ['text', 'nocache', 'flush'],
+          preload: ['tangram.js']
+        });
+        </script> 
+    </head>
+    <body>
+        <div id="Main"></div>
+        <script src="hello_tpl.boot.js"></script>
+    </body>
+</html>
