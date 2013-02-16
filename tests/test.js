@@ -1,55 +1,72 @@
 
-// Hack console for testing
-(function(global) {
+// Set `global` to `this` in non-node environment
+if (typeof global === 'undefined') {
+  global = this
+}
+
+// Hack `console` for testing
+(function() {
   var console = global.console || ( global.console = {})
   var stack = global.consoleMsgStack = []
 
   console._log = console.log || noop
   console._warn = console.warn || noop
 
-  console.log = function(arg1, arg2) {
-    var msg = arg2 ? arg1 + ' ' + arg2 : arg1
+  console.log = function(msg) {
     stack.push(msg)
     console._log(msg)
   }
 
-  console.warn = function(arg1, arg2) {
-    var msg = arg2 ? arg1 + ' ' + arg2 : arg1
+  console.warn = function(msg) {
     stack.push(msg)
     console._warn(msg)
   }
 
   function noop() {}
 
-})(this)
+})()
 
-function printResult(txt, style) {
-  var d = document.createElement('div')
-  d.innerHTML = txt
-  d.className = style
-  document.getElementById('out').appendChild(d)
-}
+// Add `printResult` and `printHeader` for browser environment
+if (typeof document !== 'undefined') {
 
-function printHeader(test, url) {
-  var h = document.createElement('h3')
-  h.innerHTML = test +
-      (url ? ' <a class="hash" href="' + url + '">#</a>' : '')
-  document.getElementById('out').appendChild(h)
-}
-
-if (typeof define === 'undefined') {
-   define = function(fn) {
-    fn(null, (this.test = {}))
+  global.printResult = function(txt, style) {
+    var d = document.createElement('div')
+    d.innerHTML = txt
+    d.className = style
+    document.getElementById('out').appendChild(d)
   }
+
+  global.printHeader = function(test, url) {
+    var h = document.createElement('h3')
+    h.innerHTML = test +
+        (url ? ' <a class="hash" href="' + url + '">#</a>' : '')
+    document.getElementById('out').appendChild(h)
+  }
+
 }
 
-define(function(require, exports) {
-  var global = this
+
+// Define test module
+(function(factory) {
+
+  if (typeof require === 'function') {
+    factory(require, exports)
+  }
+  else if (typeof define === 'function') {
+    define(factory)
+  }
+  else {
+    factory({}, (global.test = {}))
+  }
+
+})(function(require, exports) {
+
   var queue = []
   var time
   var WARNING_TIME = isLocal() ? 50 : 5000
+  var isNode = typeof process !== 'undefined'
 
-  require && require.async('./style.css')
+  require.async && require.async('./style.css')
   handleGlobalError()
 
 
@@ -73,12 +90,14 @@ define(function(require, exports) {
   exports.next = function() {
     if (queue.length) {
       printElapsedTime()
-      reset()
 
       var id = queue.shift()
       sendMessage('printHeader', id, getSingleSpecUri(id))
       time = now()
+
+      id = setup(id)
       seajs.use(id2File(id))
+      teardown()
     }
     else {
       printElapsedTime()
@@ -101,16 +120,47 @@ define(function(require, exports) {
 
   var configData = global.seajs && seajs.config.data || {}
   var defaultConfig = copy(configData, {})
+  var eventsCache = global.seajs && seajs.events
 
-  function reset() {
+  function setup(id) {
+    global.consoleMsgStack.length = 0
     seajs.off()
 
-    copy(defaultConfig, configData)
-    global.consoleMsgStack.length = 0
+    // Restore initial events
+    for (var eventType in eventsCache) {
+      if (eventsCache.hasOwnProperty(eventType)) {
+        eventsCache[eventType].forEach(function(fn) {
+          seajs.on(eventType, fn)
+        })
+      }
+    }
 
+    // Restore default configurations
+    copy(defaultConfig, configData)
+
+    // Change cwd and base to tests/specs/xxx
+    if (isNode) {
+      var parts = id.split('/')
+      process.chdir('tests/specs/' + parts[0])
+      seajs.cwd(process.cwd())
+      //console.log('  cwd = ' + seajs.cwd())
+      id = parts[1]
+    }
+
+    // Set base to current working directory
     seajs.config({
       base: './'
     })
+
+    return id
+  }
+
+  function teardown() {
+    // Restore cwd and base
+    if (isNode) {
+      process.chdir('../../../')
+      seajs.cwd(process.cwd())
+    }
   }
 
   function copy(from, to) {
@@ -152,7 +202,7 @@ define(function(require, exports) {
   }
 
   function color(str, type) {
-    return '\033[' + ANSI_CODES[type] + 'm  ' + str + '\033[0m'
+    return '\033[' + ANSI_CODES[type || 'info'] + 'm  ' + str + '\033[0m'
   }
 
   function handleGlobalError() {
@@ -170,10 +220,20 @@ define(function(require, exports) {
   }
 
   function getSingleSpecUri(id) {
+    // For Node.js
+    if (typeof location === 'undefined') {
+      return ''
+    }
+
     return location.href.replace(/\?.*$/, '') + '?' + encodeURIComponent(id)
   }
 
   function parseIdFromUri() {
+    // For Node.js
+    if (typeof location === 'undefined') {
+      return ''
+    }
+
     return decodeURIComponent(location.search)
         .replace(/&?t=\d+/, '').substring(1)
   }
@@ -195,9 +255,15 @@ define(function(require, exports) {
   }
 
   function isLocal() {
+    // For Node.js
+    if (typeof location === 'undefined') {
+      return true
+    }
+
     var host = location.host
     return location.href.indexOf('file://') === 0 ||
         host === 'localhost' || host === '127.0.0.1'
   }
-});
+
+})
 

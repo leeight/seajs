@@ -12,6 +12,8 @@ define(function(require) {
   assert(dirname('xxx') === './', 'dirname')
   assert(dirname('http://cdn.com/js/file.js') === 'http://cdn.com/js/', 'dirname')
   assert(dirname('http://cdn.com/js/file.js?t=xxx') === 'http://cdn.com/js/', 'dirname')
+  assert(dirname('http://cdn.com/js/file.js?t=xxx#zzz') === 'http://cdn.com/js/', 'dirname')
+  assert(dirname('http://example.com/page/index.html#zzz?t=xxx') === 'http://example.com/page/', 'dirname')
   assert(dirname('http://example.com/arale/seajs/1.2.0/??sea.js,plugin-combo.js') === 'http://example.com/arale/seajs/1.2.0/', 'dirname')
   assert(dirname('http://cdn.com/??seajs/1.2.0/sea.js,jquery/1.7.2/jquery.js') === 'http://cdn.com/', 'dirname')
 
@@ -31,6 +33,7 @@ define(function(require) {
   assert(normalize('c?t=20110525') === 'c?t=20110525', 'normalize')
   assert(normalize('c?t=20110525#') === 'c?t=20110525', 'normalize')
   assert(normalize('a/b/') === 'a/b/', 'normalize')
+  assert(normalize('/a/b//') === '/a/b/', 'normalize')
 
 
   seajs.config({
@@ -72,12 +75,10 @@ define(function(require) {
   assert(parseVars('{c}') === '{path}/to/c.js', 'parseVars')
 
 
-  var pageDir = dirname(pageUri)
-
   assert(addBase('http://a.com/b.js') === 'http://a.com/b.js', 'addBase')
-  assert(addBase('./a.js', 'http://test.com/path/b.js') === 'http://test.com/path/a.js', 'addBase')
+  assert(addBase('./a.js', 'http://test.com/path/b.js') === 'http://test.com/path/./a.js', 'addBase')
   assert(addBase('/b.js', 'http://test.com/path/to/c.js') === 'http://test.com/b.js', 'addBase')
-  assert(addBase('c', 'http://test.com/path/to/c.js') === pageDir + 'c', 'addBase')
+  assert(addBase('c', 'http://test.com/path/to/c.js') === cwd + 'c', 'addBase')
 
 
   seajs.config({
@@ -104,11 +105,11 @@ define(function(require) {
   assert(parseMap('cc.js') === './cc.js', 'parseMap')
 
 
-  assert(id2Uri('path/to/a') === pageDir + 'path/to/a.js', 'id2Uri')
-  assert(id2Uri('path/to/a.js') === pageDir + 'path/to/a.js', 'id2Uri')
-  assert(id2Uri('path/to/a.js#') === pageDir + 'path/to/a.js', 'id2Uri')
-  assert(id2Uri('path/to/z.js?t=1234') === pageDir + 'path/to/z.js?t=1234', 'id2Uri')
-  assert(id2Uri('path/to/z?t=1234') === pageDir + 'path/to/z?t=1234', 'id2Uri')
+  assert(id2Uri('path/to/a') === cwd + 'path/to/a.js', 'id2Uri')
+  assert(id2Uri('path/to/a.js') === cwd + 'path/to/a.js', 'id2Uri')
+  assert(id2Uri('path/to/a.js#') === cwd + 'path/to/a.js', 'id2Uri')
+  assert(id2Uri('path/to/z.js?t=1234') === cwd + 'path/to/z.js?t=1234', 'id2Uri')
+  assert(id2Uri('path/to/z?t=1234') === cwd + 'path/to/z?t=1234', 'id2Uri')
   assert(id2Uri('./b', 'http://test.com/path//to/x.js') === 'http://test.com/path/to/b.js', 'id2Uri')
   assert(id2Uri('/c', 'http://test.com/path/x.js') === 'http://test.com/c.js', 'id2Uri')
   assert(id2Uri('/root/', 'file:///Users/lifesinger/tests/specs/util/test.html') === 'file:///root/', 'id2Uri')
@@ -118,7 +119,12 @@ define(function(require) {
   assert(id2Uri('') === '', 'id2Uri')
   assert(id2Uri() === '', 'id2Uri')
   assert(id2Uri('http://XXX.com.cn/min/index.php?g=commonCss.css') === 'http://XXX.com.cn/min/index.php?g=commonCss.css', 'id2Uri')
-  assert(id2Uri('./front/jquery.x.queue.js#') === pageDir + 'front/jquery.x.queue.js', 'id2Uri')
+  assert(id2Uri('./front/jquery.x.queue.js#') === cwd + 'front/jquery.x.queue.js', 'id2Uri')
+
+  var _cwd = cwd
+  seajs.cwd('/User/lifesinger/path/to/root/')
+  assert(id2Uri('/C/path/to/a') === '/C/path/to/a.js', 'id2Uri')
+  seajs.cwd(_cwd)
 
 
   assert(isAbsolute('http://test.com/') === true, 'isAbsolute')
@@ -127,7 +133,13 @@ define(function(require) {
   assert(isRelative('./') === true, 'isRelative')
   assert(isRelative('../') === true, 'isRelative')
   assert(isRoot('/') === true, 'isRoot')
+  assert(isRoot('//') === true, 'isRoot')
+  assert(isRoot('/a') === true, 'isRoot')
   assert(isTopLevel('xxx') === true, 'isTopLevel')
+  assert(isTopLevel('./xxx') === false, 'isTopLevel')
+  assert(isTopLevel('../xxx') === false, 'isTopLevel')
+  assert(isTopLevel('/xxx') === false, 'isTopLevel')
+  assert(isTopLevel('xxx:/zzz') === false, 'isTopLevel')
 
 
   test.next()
