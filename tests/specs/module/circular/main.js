@@ -7,7 +7,6 @@ seajs.config({
 define(function(require) {
 
   var test = require('../../../test')
-  var global = this
   var consoleMsgStack = global.consoleMsgStack
 
 
@@ -70,6 +69,13 @@ define(function(require) {
     var last = getFiles(consoleMsgStack.pop())
     var second = getFiles(consoleMsgStack.pop())
     var first = getFiles(consoleMsgStack.pop())
+
+    // For Node.js
+    if (last.length > second.length) {
+      var t = second
+      second = last
+      last = t
+    }
 
     test.assert(first.join(' --> ') === 'a.js --> b.js --> c.js --> a.js', first.join(' --> '))
     test.assert(second.join(' --> ') === 'a.js --> b.js --> c.js --> d.js --> e.js --> a.js', second.join(' --> '))

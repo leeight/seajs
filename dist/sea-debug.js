@@ -1,5 +1,5 @@
 /**
- * @preserve SeaJS v2.0.0b1 | seajs.org/LICENSE.md
+ * @preserve SeaJS v2.0.0b2 | seajs.org/LICENSE.md
  */
 (function(global, undefined) {
 "use strict"
@@ -12,7 +12,7 @@ if (_seajs && !_seajs.args) {
 
 var seajs = global.seajs = {
   // The current version of SeaJS being used
-  version: "2.0.0b1"
+  version: "2.0.0b2"
 }
 
 
@@ -39,16 +39,12 @@ var isFunction = isType("Function")
 // log("message") ==> console.log("message")
 // log("message", "warn") ==> console.warn("message")
 var log = seajs.log = function(msg, type) {
-  var console = global.console
 
-  if (console) {
-    // Do NOT print `log(msg)` in non-debug mode
-    if (type || configData.debug) {
-      if (console[type || (type = "log")]) {
-        console[type](msg)
-      }
-    }
-  }
+  global.console &&
+      // Do NOT print `log(msg)` in non-debug mode
+      (type || configData.debug) &&
+      // Set the default value of type
+      (console[type || (type = "log")]) && console[type](msg)
 
 }
 
@@ -75,7 +71,7 @@ seajs.on = function(event, callback) {
 seajs.off = function(event, callback) {
   // Remove *all* events
   if (!(event || callback)) {
-    eventsCache = {}
+    seajs.events = eventsCache = {}
     return seajs
   }
 
@@ -276,7 +272,7 @@ function id2Uri(id, refUri) {
 var ABSOLUTE_RE = /(?:^|:)\/\/./
 var RELATIVE_RE = /^\.{1,2}\//
 var ROOT_RE = /^\//
-var TOPLEVEL_RE = /^\w[^:]*$/
+var TOPLEVEL_RE = /^[^./][^:]*$/
 
 function isAbsolute(id) {
   return ABSOLUTE_RE.test(id)
@@ -967,7 +963,7 @@ function config(data) {
     var prev = configData[key]
 
     // Merge object config such as alias, vars
-    if (isObject(prev)) {
+    if (prev && isObject(prev)) {
       for (var k in curr) {
         prev[k] = curr[k]
       }

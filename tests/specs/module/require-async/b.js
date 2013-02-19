@@ -1,1 +1,1 @@
-this.specs_modules_require_async = true
+global.SPECS_MODULES_ASYNC = true

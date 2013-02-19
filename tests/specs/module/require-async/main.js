@@ -1,7 +1,7 @@
 define(function(require) {
 
   var test = require('../../../test')
-  var global = this
+  var count = 0
 
 
   require.async('./a', function(a) {
@@ -10,8 +10,8 @@ define(function(require) {
   })
 
   require.async('./b.js', function() {
-    test.assert(global.specs_modules_require_async === true, 'load normal script file')
-    global.specs_modules_require_async = undefined
+    test.assert(global.SPECS_MODULES_ASYNC === true, 'load normal script file')
+    global.SPECS_MODULES_ASYNC = undefined
     done()
   })
 
@@ -22,12 +22,11 @@ define(function(require) {
   })
 
 
-  var count = 0
-
   function done() {
     if (++count === 3) {
       test.next()
     }
   }
+
 });
 
